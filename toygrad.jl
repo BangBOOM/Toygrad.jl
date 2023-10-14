@@ -81,6 +81,24 @@ function backward!(op::Log)
     op.left.grad += op.out.grad ./ op.left.data
 end
 
+#=
+TODO:
+Operations
+ + negative operation
+ + subtraction
+ + division
+ + transpose
+Activate functions
+ + sigmoid
+ + tanh
+Loss functions
+ + cross entropy
+Dropout
+Batch Operation
+Optimization
+ + SGD
+ + Adam
+=#
 
 # function cross_entropy(p::Tensor{T}, q::Tensor{T}) where {T}
 #     out = Tensor{T}(p.data .* log.(y.data))
