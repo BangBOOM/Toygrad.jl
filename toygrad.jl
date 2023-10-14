@@ -4,9 +4,10 @@ mutable struct Tensor{T<:Real}
     data::Array{T}
     grad::Array{T}
     op::Union{AbstractOP,Any}
-    Tensor{T}(a::Int, b::Int) where {T<:Real} = new(randn(T, a, b), zeros(T, a, b), nothing)
-    Tensor{T}(data::Array{T}) where {T<:Real} = new(data, zeros(T, size(data)), nothing)
-    Tensor{T}(data::Array{T}, op::Any) where {T<:Real} = new(data, zeros(T, size(data)), op)
+    requires_grad::Bool
+    Tensor{T}(a::Int, b::Int; requires_grad::Bool=true) where {T<:Real} = new(randn(T, a, b), zeros(T, a, b), nothing, requires_grad)
+    Tensor{T}(data::Array{T}; requires_grad::Bool=true) where {T<:Real} = new(data, zeros(T, size(data)), nothing, requires_grad)
+    Tensor{T}(data::Array{T}, op::Any) where {T<:Real} = new(data, zeros(T, size(data)), op, true)
 end
 
 zero_grad!(t::Tensor{T}) where {T<:Real} = fill!(t.grad, zero(T))
@@ -50,10 +51,51 @@ function backward!(op::MulOP)
     nothing
 end
 
+struct ReluOP{T} <: AbstractOP
+    left::Tensor{T}
+    out::Tensor{T}
+end
+
+function relu(x::Tensor{T}) where {T}
+    out = Tensor{T}(max.(x.data, zero(T)))
+    out.op = ReluOP{T}(x, out)
+    return out
+end
+
+function backward!(op::ReluOP)
+    op.left.grad += (op.left.data .> 0) .* op.out.grad
+end
+
+struct Log{T} <: AbstractOP
+    left::Tensor{T}
+    out::Tensor{T}
+end
+
+function log(x::Tensor{T}) where {T}
+    out = Tensor{T}(log.(x.data))
+    out.op = Log{T}(x, out)
+    return out
+end
+
+function backward!(op::Log)
+    op.left.grad += op.out.grad ./ op.left.data
+end
+
+
+# function cross_entropy(p::Tensor{T}, q::Tensor{T}) where {T}
+#     out = Tensor{T}(p.data .* log.(y.data))
+#     out.op = nothing
+#     return out
+# end
+
+
 
 function backward!(tensor::Tensor)
     isnothing(tensor.op) && return
     backward!(tensor.op)
+    hasproperty(tensor.op, :left) && backward!(tensor.op.left)
+    hasproperty(tensor.op, :right) && backward!(tensor.op.right)
+    nothing
 end
 
 
@@ -89,7 +131,5 @@ o = w2 * (w * x + b)
 @show o.data
 one_grad!(o)
 backward!(o)
-# one_grad!(o)
-# backward!(o)
 @show w2.grad
-
+@show w.grad
