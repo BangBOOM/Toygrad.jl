@@ -4,6 +4,7 @@ mutable struct Tensor{T<:Real}
     data::Array{T}
     grad::Array{T}
     op::Union{AbstractOP,Any}
+    Tensor{T}(a::Int, b::Int) where {T<:Real} = new(randn(T, a, b), zeros(T, a, b), nothing)
     Tensor{T}(data::Array{T}) where {T<:Real} = new(data, zeros(T, size(data)), nothing)
     Tensor{T}(data::Array{T}, op::Any) where {T<:Real} = new(data, zeros(T, size(data)), op)
 end
@@ -11,7 +12,7 @@ end
 zero_grad!(t::Tensor{T}) where {T<:Real} = fill!(t.grad, zero(T))
 one_grad!(t::Tensor{T}) where {T<:Real} = fill!(t.grad, one(T))
 
-mutable struct AddOP{T} <: AbstractOP
+struct AddOP{T} <: AbstractOP
     left::Tensor{T}
     right::Tensor{T}
     out::Tensor{T}
@@ -27,9 +28,10 @@ end
 function backward!(op::AddOP)
     op.left.grad += op.out.grad
     op.right.grad += op.out.grad
+    nothing
 end
 
-mutable struct MulOP{T} <: AbstractOP
+struct MulOP{T} <: AbstractOP
     left::Tensor{T}
     right::Tensor{T}
     out::Tensor{T}
@@ -44,7 +46,8 @@ end
 
 function backward!(op::MulOP)
     op.left.grad += op.out.grad * op.right.data'
-    op.right.grad += op.out.grad * op.left.data'
+    op.right.grad += op.left.data' * op.out.grad
+    nothing
 end
 
 
@@ -70,6 +73,10 @@ b = Tensor{Float32}(
     ]
 )
 
+w2 = Tensor{Float32}(
+    [1.0f0 2.0f0 1.0f0]
+)
+
 x = Tensor{Float32}(
     [
         2.0f0
@@ -77,7 +84,12 @@ x = Tensor{Float32}(
     ]
 )
 
-o = w * x + b
+o = w2 * (w * x + b)
 
 @show o.data
+one_grad!(o)
+backward!(o)
+# one_grad!(o)
+# backward!(o)
+@show w2.grad
 
