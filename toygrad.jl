@@ -233,4 +233,8 @@ if abspath(PROGRAM_FILE) == @__FILE__
     @show w2.grad
     @show w.grad
 
+
+    @assert w2.grad ≈ [10.0 21.0 32.0]
+    @assert w.grad ≈ [2.0 3.0; 4.0 6.0; 2.0 3.0]
+
 end
