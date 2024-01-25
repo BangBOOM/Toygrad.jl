@@ -169,6 +169,7 @@ Operations
  [-] division
  [-] transpose
 Activate functions
+ [-] relu
  [] sigmoid
  [] tanh
 Loss functions
