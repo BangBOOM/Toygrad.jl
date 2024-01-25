@@ -35,13 +35,13 @@ function Base.:+(left::Tensor{T}, right::Tensor{T}) where {T}
 end
 
 function Base.:+(left::T, right::Tensor{T}) where {T}
-    out = Tensor{T}(left + right.data)
+    out = Tensor{T}(left .+ right.data)
     out.op = AddOP{T}(Tensor{T}(left), right, out)
     return out
 end
 
 function Base.:+(left::Tensor{T}, right::T) where {T}
-    out = Tensor{T}(left.data + right)
+    out = Tensor{T}(left.data .+ right)
     out.op = AddOP{T}(left, Tensor{T}(right), out)
     return out
 end
@@ -60,7 +60,7 @@ end
 
 function Base.:-(left::Tensor{T}, right::Tensor{T}) where {T}
     @assert size(left.data) == size(right.data)
-    out = Tensor{T}(left.data - right.data)
+    out = Tensor{T}(left.data .- right.data)
     out.op = MinusOP{T}(left, right, out)
     return out
 end
@@ -148,7 +148,7 @@ struct Log{T} <: AbstractOP
     out::Tensor{T}
 end
 
-function log(x::Tensor{T}) where {T}
+function tlog(x::Tensor{T}) where {T}
     out = Tensor{T}(log.(x.data))
     out.op = Log{T}(x, out)
     return out
@@ -202,7 +202,7 @@ if abspath(PROGRAM_FILE) == @__FILE__
         [
             1.0f0 2.0f0
             3.0f0 4.0f0
-            5.0f0 6.0f0
+            5.0f0 -6.0f0
         ]
     )
 
@@ -225,16 +225,14 @@ if abspath(PROGRAM_FILE) == @__FILE__
         ]
     )
 
-    o = w2 * (w * x + b)
+    # o = w2 * (w * x + b)
+    o = tlog(w2 * relu(w * x + b) + 0.1f0)
 
-    @show o.data
     one_grad!(o)
     backward!(o)
-    @show w2.grad
-    @show w.grad
 
-
-    @assert w2.grad ≈ [10.0 21.0 32.0]
-    @assert w.grad ≈ [2.0 3.0; 4.0 6.0; 2.0 3.0]
-
+    @assert o.data ≈ [3.9532]
+    @assert w2.grad ≈ [0.1919 0.4031 0.0000]
+    @assert w.grad ≈ [0.0384 0.0576; 0.0768 0.1152; 0.0 0.0]
+    println("test successful!")
 end
