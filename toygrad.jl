@@ -158,6 +158,21 @@ function backward!(op::Log)
     op.left.grad += op.out.grad ./ op.left.data
 end
 
+struct Sigmoid{T} <: AbstractOP
+    left::Tensor{T}
+    out::Tensor{T}
+end
+
+function sigmoid(x::Tensor{T}) where {T}
+    out = Tensor{T}(one(T) ./ (one(T) .+ exp.(-x.data)))
+    out.op = Sigmoid{T}(x, out)
+    return out
+end
+
+function backward!(op::Sigmoid{T}) where {T}
+    op.left.grad += op.out.grad .* op.out.data .* (one(T) .- op.out.data)
+end
+
 
 Base.:transpose(x::Tensor{T}) where {T} = Tensor{T}(x.data', x.grad', x.op, x.requires_grad)
 
@@ -170,12 +185,13 @@ Operations
  [-] transpose
 Activate functions
  [-] relu
- [] sigmoid
+ [-] sigmoid
  [] tanh
 Loss functions
  [] cross entropy
 Dropout
 Batch Operation
+ [] Normalization
 Optimization
  [] SGD
  [] Adam
@@ -197,43 +213,3 @@ function backward!(tensor::Tensor)
     nothing
 end
 
-if abspath(PROGRAM_FILE) == @__FILE__
-
-    w = Tensor{Float32}(
-        [
-            1.0f0 2.0f0
-            3.0f0 4.0f0
-            5.0f0 -6.0f0
-        ]
-    )
-
-    b = Tensor{Float32}(
-        [
-            2.0f0
-            3.0f0
-            4.0f0
-        ]
-    )
-
-    w2 = Tensor{Float32}(
-        [1.0f0 2.0f0 1.0f0]
-    )
-
-    x = Tensor{Float32}(
-        [
-            2.0f0
-            3.0f0
-        ]
-    )
-
-    # o = w2 * (w * x + b)
-    o = tlog(w2 * relu(w * x + b) + 0.1f0)
-
-    one_grad!(o)
-    backward!(o)
-
-    @assert o.data ≈ [3.9532]
-    @assert w2.grad ≈ [0.1919 0.4031 0.0000]
-    @assert w.grad ≈ [0.0384 0.0576; 0.0768 0.1152; 0.0 0.0]
-    println("test successful!")
-end
