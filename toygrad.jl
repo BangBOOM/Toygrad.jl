@@ -173,6 +173,22 @@ function backward!(op::Sigmoid{T}) where {T}
     op.left.grad += op.out.grad .* op.out.data .* (one(T) .- op.out.data)
 end
 
+struct Tanh{T} <: AbstractOP
+    left::Tensor{T}
+    out::Tensor{T}
+end
+
+# function 
+function Base.:tanh(x::Tensor{T}) where {T}
+    out = Tensor{T}(tanh.(x.data))
+    out.op = Tanh{T}(x, out)
+    return out
+end
+
+function backward!(op::Tanh{T}) where {T}
+    op.left.grad += op.out.grad .* (one(T) .- op.out.data .* op.out.data)
+end
+
 
 Base.:transpose(x::Tensor{T}) where {T} = Tensor{T}(x.data', x.grad', x.op, x.requires_grad)
 
@@ -186,10 +202,10 @@ Operations
 Activate functions
  [-] relu
  [-] sigmoid
- [] tanh
+ [-] tanh
 Loss functions
  [] cross entropy
-Dropout
+[] Dropout
 Batch Operation
  [] Normalization
 Optimization

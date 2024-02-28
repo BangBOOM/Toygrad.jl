@@ -53,3 +53,15 @@ end
     @test w2.grad ≈ [1.0000 1.0000 0.0180]
     @test w.grad ≈ [9.0833e-05 1.3625e-04; 0.0000e+00 0.0000e+00; 3.5325e-02 5.2988e-02]
 end
+
+@testset "test tanh" begin
+    zero_grad!(w)
+    zero_grad!(b)
+    zero_grad!(w2)
+    o = w2 * tanh(w * x + b)
+    one_grad!(o)
+    backward!(o)
+    @test o.data ≈ [2.0007]
+    @test w2.grad ≈ [1.0000 1.0000 -0.9993]
+    @test w.grad ≈ [0.0 0.0; 0.0 0.0; 0.0026817322 0.0040225983]
+end
